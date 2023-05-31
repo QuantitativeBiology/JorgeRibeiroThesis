@@ -21,6 +21,9 @@ class MVS_dataframe():
         self.proteomics_unstack=self.proteomics.unstack()
         self.transcriptomics_unstack=self.transcriptomics.unstack()
 
+        self.mean_scatter_plot=pd.DataFrame()
+        self.max_value=float()
+
     def get_scatter_mean_plot_df(self):
 
         #obtain the means of transcript values
@@ -28,15 +31,18 @@ class MVS_dataframe():
         MVs_proteins = self.proteomics_unstack.groupby(level=1).apply(lambda x: x.isna().sum())
 
         self.mean_scatter_plot=pd.DataFrame({'mean_transcript_value':mean_transcript, 'MVs_counts':MVs_proteins})
+        self.max_value=max(self.mean_scatter_plot.max())
 
     def get_scatter_mean_plot_graph(self, with_lowess, plot_points):
-        sns.regplot(x='mean_transcript_value', y='MVs_counts', data=self.mean_scatter_plot, lowess=with_lowess, scatter_kws={'color': 'white', 'edgecolor': 'black', 'linewidth': 0.2}, ci=None, scatter=plot_points, line_kws={'color': 'black'})
+        
+        sns.regplot(x='mean_transcript_value', y='MVs_counts', data=self.mean_scatter_plot, lowess=with_lowess, truncate=True, scatter_kws={'color': 'white', 'edgecolor': 'black', 'linewidth': 0.2}, ci=None, scatter=plot_points, line_kws={'color': 'black'})
 
     def get_heatmap_mean_plot(self):
         sns.kdeplot(data=self.mean_scatter_plot , x='mean_transcript_value', y='MVs_counts', fill=True, cmap='viridis')
 
     def get_hex_bins_graph(self, bin_size=20):
-        sns.jointplot(data=plot,x='mean_transcript_value', y='MVs_counts', kind='hex', cmap='Blues', joint_kws={'gridsize':20} )
+        plt.clf
+        sns.jointplot(data=self.mean_scatter_plot,x='mean_transcript_value', y='MVs_counts', kind='hex', cmap='Blues', joint_kws={'gridsize':bin_size})
 
     def point_coloring_heatmap(self, with_lowess):
         if ~self.mean_scatter_plot.empty:
@@ -56,7 +62,7 @@ class MVS_dataframe():
             )
         else:
             self.get_scatter_mean_plot_df()
-            color=self.density_interpolate(self.mean_scatter_plot['mean_transcript_value'], self.mean_scatter_plot['MVs_counts'])           
+            color=self.density_interpolate(self.mean_scatter_plot['mean_transcript_value'], self.mean_scatter_plot['MVs_counts'])
             ax = plt.gca()
 
             ax.scatter(
@@ -71,7 +77,7 @@ class MVS_dataframe():
             )
         if with_lowess:
             self.get_scatter_mean_plot_graph(True, False)
-    
+
     def density_interpolate(self, xx, yy):
         data, x_e, y_e = np.histogram2d(xx, yy, bins=20)
 
@@ -87,28 +93,35 @@ class MVS_dataframe():
     
     def get_histogram(self, bin_number):
         MV_mask=self.proteomics_unstack.isna()
-        histogram_dataset=self.transcriptomics_unstack[MV_mask]
+        # histogram_dataset=self.transcriptomics_unstack[MV_mask]
 
         counts_transcripts, bins, _ = plt.hist(self.transcriptomics_unstack, bins=bin_number)
         
         df=pd.concat([self.transcriptomics_unstack, self.proteomics_unstack], axis=1)
         df=df.drop(df.index[~df.isnull().any(axis=1)])
 
-        counts_MVs, _, _ = plt.hist(df.iloc[:,0], bins)
-
+        counts_MVs, _, patches = plt.hist(df.iloc[:,0], bins)
         percentages= counts_MVs/counts_transcripts
-        print(percentages)
+
+        for i in range(len(patches)):
+            plt.text(patches[i].get_x()+patches[i].get_width()/2, patches[i].get_height()+5, f'{percentages[i]:.2f}', ha='center', fontsize=6)
+
+
+        
+
 
 if __name__=='__main__':
     df=MVS_dataframe('/data/benchmarks/clines/transcriptomics.csv','/data/benchmarks/clines/proteomics.csv')
     df.get_scatter_mean_plot_df()
-    df.get_scatter_mean_plot_graph(True, True)
 
     save_fig, axis = plt.subplots()
     #axis.scatter(df.mean_scatter_plot['mean_transcript_value'], df.mean_scatter_plot['MVs_counts'])
     axis.set_xlabel('Transcript Mean')
     axis.set_ylabel('Number of MVs')
+    plt.xlim(df.mean_scatter_plot["mean_transcript_value"].min(), df.mean_scatter_plot["mean_transcript_value"].max())
+    plt.ylim(0, df.mean_scatter_plot['MVs_counts'].max())
 
+    df.get_scatter_mean_plot_graph(True, True)
     plt.savefig("results/plot_by_mean.png")
     plt.clf()
     df.get_heatmap_mean_plot()
@@ -117,6 +130,9 @@ if __name__=='__main__':
 
     df.point_coloring_heatmap(True)
     plt.savefig('results/plot_by_mean_point_color.png')
+    plt.clf()
+    
+    df.get_hex_bins_graph()
     plt.clf()
 
     df.get_histogram(20)
