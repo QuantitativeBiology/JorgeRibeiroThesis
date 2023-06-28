@@ -23,25 +23,62 @@ print("Dataset loaded")
 dataset <- dataset_withGeneSymbol[,-1]
 print("First column removed")
 
-# Perform the imputation using missForest
-imputed_dataset <- missForest(dataset, verbose = TRUE, maxiter = 10, ntree = 1000, variablewise = TRUE, decreasing = TRUE, parallelize = "variables", replace = TRUE, xtrue = NULL)
+
+#make a new directory to save the results if it does not exist
+if (!file.exists("results/missForest_30_1000"))
+{
+  dir.create("results/missForest_30_1000")
+  print("Directory created")
+}
+
+
+# Perform the imputation using missForest while saving output in a file
+sink("results/missForest_30_1000/proteomics_imputation_output_maxitter30_ntree1000_replaceT_decreasingT.txt")
+print("Imputation started")
+imputed_dataset <- missForest(dataset, maxiter = 30, ntree = 1000, replace = TRUE, decreasing = TRUE, parallelize = "variables", verbose = TRUE,variablewise = TRUE)
 print("Imputation done")
+
 
 # Access the imputed dataset
 imputed_data <- imputed_dataset$ximp
+print("Imputed dataset accessed")
 
-# Add the sample names to the imputed dataset
-rownames(imputed_data) <- rownames(dataset_withGeneSymbol)
+# Add the sample names to the imputed dataset first
+imputed_data$sample_names <- dataset_withGeneSymbol$sample_names
 print("Sample names added")
 
-#augment the data with data for future analysis, original missingness, imputation convergence, variable importance, OOB error
+#get the estimated error for each variable
+# imputed_data$estimated_error <- imputed_dataset$OOBerror
+# print(imputed_data$estimated_error)
+# print("Estimated error added")
+
+
+#save data for future analysis, original missingness, imputation convergence, variable importance, OOB error
 imputed_data$original_missingness <- rowSums(is.na(dataset))
-imputed_data$imputation_convergence <- rowSums(imputed_dataset$convergence)
-imputed_data$variable_importance <- rowSums(imputed_dataset$importance)
-imputed_data$OOB_error <- rowSums(imputed_dataset$error)
+imputed_data$imputation_convergence <- imputed_dataset$convergence
+imputed_data$variable_importance <- imputed_dataset$importance
+imputed_data$OOB_error <- imputed_dataset$error
 print("Imputed dataset augmented")
 
-# Save the imputed dataset
-write.csv(imputed_data, file = "/results/imputated_matrix.csv")
+
+# Save the imputed dataset in a new csv file
+write.csv(imputed_data, file = "results/missForest_30_1000/proteomics_imputed_maxitter30_ntree1000_replaceT_decreasingT.csv")
 print("Imputed dataset saved")
-```
+
+#save the orignal missingness, imputation convergence, variable importance, OOB error in a file txt
+write.table(imputed_data$original_missingness, file = "results/missForest_30_1000/proteomics_original_missingness_maxitter30_ntree1000_replaceT_decreasingT.txt")
+write.table(imputed_data$convergence, file = "results/missForest_30_1000/proteomics_imputation_convergence_maxitter30_ntree1000_replaceT_decreasingT.txt")
+write.table(imputed_data$variable_importance, file = "results/missForest_30_1000/proteomics_variable_importance_maxitter30_ntree1000_replaceT_decreasingT.txt")
+write.table(imputed_data$OOB_error, file = "results/missForest_30_1000/proteomics_OOB_error_maxitter30_ntree1000_replaceT_decreasingT.txt")
+print("Imputation convergence, variable importance, OOB error saved")
+
+# Save the imputed dataset in a new RData file
+save(imputed_data, file = "results/missForest_30_1000/proteomics_imputed_maxitter30_ntree1000_replaceT_decreasingT.RData")
+print("Imputed dataset saved in RData format")
+
+
+# Stop the parallelization
+stopImplicitCluster()
+print("Parallelization stopped")
+
+# End of script
