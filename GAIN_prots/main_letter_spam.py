@@ -22,6 +22,7 @@ from __future__ import print_function
 
 import argparse
 import numpy as np
+import pandas as pd 
 
 from data_loader import data_loader
 from gain import gain
@@ -54,17 +55,25 @@ def main (args):
   
   # Load data and introduce missingness
   ori_data_x, miss_data_x, data_m = data_loader(data_name, miss_rate)
-  
+
+
   # Impute missing data
   imputed_data_x = gain(miss_data_x, gain_parameters)
   
   # Report the RMSE performance
-  rmse = rmse_loss (ori_data_x, imputed_data_x, data_m)
+  rmse = rmse_loss (ori_data_x.values, imputed_data_x, data_m)
   
+  #obtain a pandas dataframe from the imputed data np array
+  imputed_data_df = pd.DataFrame(imputed_data_x)
+
+  #give the columns and rows the same names as the original data
+  imputed_data_df.columns = ori_data_x.columns
+  imputed_data_df.index = ori_data_x.index
+
   print()
   print('RMSE Performance: ' + str(np.round(rmse, 4)))
   
-  return imputed_data_x, rmse
+  return imputed_data_df, rmse
 
 if __name__ == '__main__':  
   
@@ -105,3 +114,9 @@ if __name__ == '__main__':
   
   # Calls main function  
   imputed_data, rmse = main(args)
+
+
+  #save the imputed data as a csv file
+  imputed_data.to_csv("results/imputed_data_"+args.data_name+"_missrate_"+str(args.miss_rate)+"_batchsize_"+str(args.batch_size)+"_hintrate_"+str(args.hint_rate)+"_alpha_"+str(args.alpha)+"_iterations_"+str(args.iterations)+".csv")
+
+  

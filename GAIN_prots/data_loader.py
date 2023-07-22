@@ -33,6 +33,7 @@ def data_loader (data_name, miss_rate):
     data_x: original data
     miss_data_x: data with missing values
     data_m: indicator matrix for missing components
+    data_indexed: data with missing values and indexed
   '''
   
   # Load data
@@ -45,16 +46,18 @@ def data_loader (data_name, miss_rate):
   #load data from the proteomics dataset
   else:
     file_name = '/data/benchmarks/clines/proteomics.csv'
-    data_x=pd.read_csv(file_name,header=0, index_col=1)
-    print(data_x.shape)
 
-    data_x=data_x.drop(data_x.columns[0], axis=1)
+    data_x=pd.read_csv(file_name, index_col=0)
+    print(data_x.shape) #6671,949 -> 6671 proteins, 949 cell lines
 
-    #remove samples with more than 5% missingness
-    data_x=data_x.dropna(thresh=0.95*data_x.shape[1])
-    data_x=data_x.dropna(axis=1, how='all')
+    
+    #TODO: check if this is necessary
+    #remove the first row of the dataframe
+    #data_x = data_x.iloc[1:, :]
 
-    print(data_x.shape)
+    #remove the first column of the dataframe
+    #data_x = data_x.iloc[:,1:]
+    
     #adaptar python3
     # TODO: alterar para proteomics
 
@@ -64,7 +67,7 @@ def data_loader (data_name, miss_rate):
   
   # Introduce missing data
   data_m = binary_sampler(1-miss_rate, no, dim)
-  miss_data_x = data_x.copy()
+  miss_data_x = data_x.values.copy()
   miss_data_x[data_m == 0] = np.nan
       
   return data_x, miss_data_x, data_m

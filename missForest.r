@@ -19,6 +19,7 @@ print("Cores registered")
 dataset_withGeneSymbol <- read.csv('/data/benchmarks/clines/proteomics.csv')
 print("Dataset loaded")
 
+
 # Remove the first column (sample names)
 dataset <- dataset_withGeneSymbol[,-1]
 print("First column removed")
@@ -31,8 +32,8 @@ if (!file.exists("results/missForest_30_1000"))
   print("Directory created")
 }
 
-
 # Perform the imputation using missForest while saving output in a file
+
 sink("results/missForest_30_1000/proteomics_imputation_output_maxitter30_ntree1000_replaceT_decreasingT.txt")
 print("Imputation started")
 imputed_dataset <- missForest(dataset, maxiter = 30, ntree = 1000, replace = TRUE, decreasing = TRUE, parallelize = "variables", verbose = TRUE,variablewise = TRUE)
@@ -43,14 +44,14 @@ print("Imputation done")
 imputed_data <- imputed_dataset$ximp
 print("Imputed dataset accessed")
 
-# Add the sample names to the imputed dataset first
-imputed_data$sample_names <- dataset_withGeneSymbol$sample_names
+#obtain the first column from the original dataset
+GeneSymbol <- dataset_withGeneSymbol[,1]
+print("Sample names accessed")
+
+#make the index of the imputed dataset the gene symbol
+rownames(imputed_data) <- GeneSymbol
 print("Sample names added")
 
-#get the estimated error for each variable
-# imputed_data$estimated_error <- imputed_dataset$OOBerror
-# print(imputed_data$estimated_error)
-# print("Estimated error added")
 
 
 #save data for future analysis, original missingness, imputation convergence, variable importance, OOB error

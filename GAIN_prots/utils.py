@@ -139,10 +139,21 @@ def rmse_loss (ori_data, imputed_data, data_m):
   
   ori_data, norm_parameters = normalization(ori_data)
   imputed_data, _ = normalization(imputed_data, norm_parameters)
-    
+  
+  # Obtain a matrix of missing  values in ori data with np.isnan
+  # and then convert it to a matrix of 0s and 1s with astype(int)
+  data_missing_initial= np.isnan(ori_data)
+  data_missing_initial = data_missing_initial.astype(int)
+  
+  # Obtain a matrix that is 1 where data_missing_initial is 0 and data_m is 1
+  data_missing = (1-data_missing_initial) * data_m
+
   # Only for missing values
-  nominator = np.sum(((1-data_m) * ori_data - (1-data_m) * imputed_data)**2)
-  denominator = np.sum(1-data_m)
+  # nominator = np.sum(((1-data_m) * ori_data - (1-data_m) * imputed_data)**2)
+  # denominator = np.sum(1-data_m)
+
+  nominator = np.sum((data_missing * ori_data - data_missing * imputed_data)**2)
+  denominator = np.sum(data_missing)
   
   rmse = np.sqrt(nominator/float(denominator))
   
@@ -174,6 +185,8 @@ def binary_sampler(p, rows, cols):
   Returns:
     - binary_random_matrix: generated binary random matrix.
   '''
+  #TODO: modify for adding extra MVs
+  #TODO: check the probability obtained (number of MVs actually added)
   unif_random_matrix = np.random.uniform(0., 1., size = [rows, cols])
   binary_random_matrix = 1*(unif_random_matrix < p)
   return binary_random_matrix
