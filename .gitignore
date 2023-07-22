@@ -164,3 +164,7 @@ cython_debug/
 .vscode/*
 results/*
 *.csv.gz
+*.csv
+Proteomics/*
+GAIN_prots/data/*
+GAIN_prots/results/*
