@@ -6,3 +6,6 @@ seaborn
 statsmodels
 tensorflow
 tqdm
+optuna
+plotly
+kaleido

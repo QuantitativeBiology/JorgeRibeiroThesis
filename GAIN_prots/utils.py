@@ -26,11 +26,27 @@
  
 # Necessary packages
 import numpy as np
+import datetime
 #import tensorflow as tf
 ##IF USING TF 2 use following import to still use TF < 2.0 Functionalities
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
+
+def get_hour_day(time):
+  '''Get the hour and day of the week from a datetime object
+  Args:
+    - time: datetime object
+  Returns:
+    - time: hour_day_month string
+  '''
+  hour = str(time.hour)
+  day = str(time.day)
+  month = time.strftime("%B")
+
+  time=hour+'h_'+day+month[:3]
+
+  return time
 
 def normalization (data, parameters=None):
   '''Normalize data in [0, 1] range.
@@ -125,13 +141,13 @@ def rounding (imputed_data, data_x):
   return rounded_data
 
 
-def rmse_loss (ori_data, imputed_data, data_m):
+def rmse_loss (ori_data, imputed_data, data_m, print_option=True):
   '''Compute RMSE loss between ori_data and imputed_data
   
   Args:
-    - ori_data: original data without missing values
+    - ori_data: original data without added missing values
     - imputed_data: imputed data
-    - data_m: indicator matrix for missingness
+    - data_m: indicator matrix for missingness after added missing values
     
   Returns:
     - rmse: Root Mean Squared Error
@@ -142,22 +158,64 @@ def rmse_loss (ori_data, imputed_data, data_m):
   
   # Obtain a matrix of missing  values in ori data with np.isnan
   # and then convert it to a matrix of 0s and 1s with astype(int)
+  #is 1 where there is missing data and 0 where there is not
   data_missing_initial= np.isnan(ori_data)
   data_missing_initial = data_missing_initial.astype(int)
-  
-  # Obtain a matrix that is 1 where data_missing_initial is 0 and data_m is 1
-  data_missing = (1-data_missing_initial) * data_m
 
+  # replace the missing values in the original data with 0s
+  # ori_data[data_missing_initial==1] = imputed_data[data_missing_initial==1]
+  ori_data[data_missing_initial==1] = 0
+  
+
+  
+  # Obtain a matrix that is 1 where data_missing_initial is 0 and data_m is 0 (i.e. where there is no missing data in the original data and but there is in the extended missing data)
+  data_missing_shared = (data_missing_initial) * (1-data_m)
+  data_missing_added = (1-data_missing_initial) * (1-data_m)
+  data_training = (1-data_missing_initial) * (data_m)
+
+
+  #get number of missing values in the original data
+  num_missing = np.sum(data_missing_initial)
+
+  #get number of missing values in the extended missing data
+  num_missing_extended = np.sum(data_missing_added)
+
+  #get percentage of MVs in the original data and in the extended missing data
+  perc_missing = num_missing/(ori_data.shape[0]*ori_data.shape[1])
+  perc_missing_extended = num_missing_extended/(ori_data.shape[0]*ori_data.shape[1])
+  perc_missing_shared = np.sum(data_missing_shared)/(ori_data.shape[0]*ori_data.shape[1])
+  perc_missing_total = (np.sum(1-data_m))/(ori_data.shape[0]*ori_data.shape[1])
+  if print_option:
+    print("perc_missing_ori_data: ", perc_missing)
+    print("perc_missing_data_missing_initial", np.sum(data_missing_initial)/(ori_data.shape[0]*ori_data.shape[1]))
+    print("perc_missing_extended: ", perc_missing_extended)
+    print("perc_missing_shared: ", perc_missing_shared)
+    print("perc_missing_total: ", perc_missing_total)
+    
   # Only for missing values
   # nominator = np.sum(((1-data_m) * ori_data - (1-data_m) * imputed_data)**2)
   # denominator = np.sum(1-data_m)
-
-  nominator = np.sum((data_missing * ori_data - data_missing * imputed_data)**2)
-  denominator = np.sum(data_missing)
-  
+  nominator = np.sum((data_missing_added * ori_data - data_missing_added * imputed_data)**2)
+  denominator = np.sum(data_missing_added)
+  if denominator == 0:
+    if print_option:
+      print("No missing values were added, no error can be calculated")
+    return np.nan, np.nan
+    
   rmse = np.sqrt(nominator/float(denominator))
+
+  #get shared MVs error compared to zero (mean when normalized?) - 
+  nominator_shared = np.sum((data_missing_shared * ori_data - data_missing_shared * imputed_data)**2)
+  if print_option:
+    print("error_shared_MVS_to_0: ", np.sqrt(nominator_shared/float(np.sum(data_missing_shared))))
+
+  #get data training error - should be zero
+  nominator_training = np.sum((data_training * ori_data - data_training * imputed_data)**2)
+  rmse_training = np.sqrt(nominator_training/float(np.sum(data_training)))
+  if print_option:
+    print("error_training_data: ", rmse_training)
   
-  return rmse
+  return rmse, rmse_training
 
 
 def xavier_init(size):
@@ -173,6 +231,43 @@ def xavier_init(size):
   xavier_stddev = 1. / tf.sqrt(in_dim / 2.)
   return tf.random_normal(shape = size, stddev = xavier_stddev)
       
+def MVS_adder(data_x, perc_MV, set_seed=False):
+  '''Add missing values to the original data.
+  
+  Args:
+    - data_x: original data with missing values
+    - data_missing_initial: indicator matrix for missingness
+    - perc_MV: percentage of MVs to add
+    
+  Returns:
+    - data_x_extended: original data with more missing values
+    - data_m_extended: indicator matrix for missingness
+  '''
+  data_m_extended = 1-np.isnan(data_x)
+
+
+  #get number of MVs to add
+  num_MV_to_add = int(data_x.size*perc_MV)
+
+  # get indices to add MVS besides the ones already present with a set seed
+  if set_seed:
+    np.random.seed(20)
+
+  idx_to_add = np.where(data_m_extended==1)
+  idx_to_add = np.array(idx_to_add)
+  idx_to_add = idx_to_add.T
+  idx_to_add = idx_to_add.tolist()
+  idx_to_add = np.random.permutation(idx_to_add)
+  idx_to_add = idx_to_add[:num_MV_to_add]
+  idx_to_add = np.array(idx_to_add)
+  idx_to_add = idx_to_add.T
+
+  #add MVs to the original data
+  np.put(data_m_extended, np.ravel_multi_index(idx_to_add, data_x.shape), 0)
+
+  return data_m_extended
+
+
 
 def binary_sampler(p, rows, cols):
   '''Sample binary random variables.
@@ -185,8 +280,6 @@ def binary_sampler(p, rows, cols):
   Returns:
     - binary_random_matrix: generated binary random matrix.
   '''
-  #TODO: modify for adding extra MVs
-  #TODO: check the probability obtained (number of MVs actually added)
   unif_random_matrix = np.random.uniform(0., 1., size = [rows, cols])
   binary_random_matrix = 1*(unif_random_matrix < p)
   return binary_random_matrix

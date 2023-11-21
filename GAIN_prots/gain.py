@@ -26,37 +26,41 @@ Contact: jsyoon0823@gmail.com
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
+import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
+import datetime
 
-from utils import normalization, renormalization, rounding
-from utils import xavier_init
+from utils import normalization, renormalization, rounding, rmse_loss
+from utils import xavier_init, get_hour_day
 from utils import binary_sampler, uniform_sampler, sample_batch_index
 
 
-def gain (data_x, gain_parameters):
+def gain (data_x, gain_parameters, ori_data_x):
   '''Impute missing values in data_x
   
   Args:
-    - data_x: original data with missing values
+    - data_x: data with missing values
     - gain_parameters: GAIN network parameters:
       - batch_size: Batch size
       - hint_rate: Hint rate
       - alpha: Hyperparameter
       - iterations: Iterations
-      
+    - ori_data_x: original data without missing values for RMSE calculation
   Returns:
     - imputed_data: imputed data
   '''
-  # Define mask matrix
+  # Define mask matrix - 1: observed, 0: missing
   data_m = 1-np.isnan(data_x)
-  
+
   # System parameters
   batch_size = gain_parameters['batch_size']
   hint_rate = gain_parameters['hint_rate']
   alpha = gain_parameters['alpha']
   iterations = gain_parameters['iterations']
-  
+  missing_rate = np.isnan(data_x).sum()/(data_x.shape[0]*data_x.shape[1])
+  missing_rate = round(missing_rate, 3)
+
   # Other parameters
   no, dim = data_x.shape
   
@@ -143,6 +147,15 @@ def gain (data_x, gain_parameters):
   
   D_loss = D_loss_temp
   G_loss = G_loss_temp + alpha * MSE_loss 
+
+  #save loss across iterations for plotting including both parts of 
+  D_loss_list = []
+  G_loss_list = []
+  MSE_loss_alpha_list = []
+  MSE_loss_list = []
+  rmse_loss_list = []
+  G_total_loss_list = []
+  rmse_training_data_list = []
   
   ## GAIN solver
   D_solver = tf.train.AdamOptimizer().minimize(D_loss, var_list=theta_D)
@@ -173,7 +186,63 @@ def gain (data_x, gain_parameters):
     _, G_loss_curr, MSE_loss_curr = \
     sess.run([G_solver, G_loss_temp, MSE_loss],
              feed_dict = {X: X_mb, M: M_mb, H: H_mb})
+    
+    #save loss across iterations for plotting
+    D_loss_list.append(D_loss_curr)
+    G_loss_list.append(G_loss_curr)
+    MSE_loss_list.append(MSE_loss_curr)
+    MSE_loss_alpha_list.append(alpha * MSE_loss_curr)
+    G_total_loss_list.append(G_loss_curr + alpha * MSE_loss_curr)
+
+    #get imputed data from this iteration
+    Z_mb = uniform_sampler(0, 0.01, no, dim) 
+    M_mb = data_m
+    X_mb = norm_data_x          
+    X_mb = M_mb * X_mb + (1-M_mb) * Z_mb 
+    imputed_data = sess.run([G_sample], feed_dict = {X: X_mb, M: M_mb})[0]
+    #imputed_data = data_m * norm_data_x + (1-data_m) * imputed_data
+    imputed_data = renormalization(imputed_data, norm_parameters)
+    imputed_data = rounding(imputed_data, data_x)
+    
+    #save rmse across iterations for plotting
+    rmse_loss_current, rmse_training_data_loss_current= rmse_loss(ori_data_x, imputed_data, data_m, False)
+    rmse_loss_list.append(rmse_loss_current)
+    rmse_training_data_list.append(rmse_training_data_loss_current)
             
+  #plot loss across iterations
+  plt.plot(D_loss_list, label='D_loss')
+  plt.plot(G_loss_list, label='G_loss')
+  plt.plot(MSE_loss_list, label='MSE_loss')
+  plt.plot(MSE_loss_alpha_list, label='alpha*MSE_loss')
+  plt.plot(G_total_loss_list, label='G_total_loss')
+  plt.title('GAIN Loss Plot')
+  plt.xlabel('Iteration')
+  plt.ylabel('Loss')
+  plt.legend()
+  plt.show()
+
+  #get hour and day in the same string for saving the plot
+  time_stamp=get_hour_day( datetime.datetime.now())
+  
+
+
+  #save the plot with the hyperparameters in the name
+  plt.savefig('loss_plots/GAIN_loss_'+ str(time_stamp)+ '_' + str(missing_rate) + '_' + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+
+  #clear the plot
+  plt.clf()
+
+  #plot rmse across iterations and save it
+  plt.plot(rmse_loss_list, label='RMSE_loss')
+  plt.plot(rmse_training_data_list, label='RMSE_training_data_loss')
+  plt.title('GAIN RMSE Plot')
+  plt.xlabel('Iteration')
+  plt.ylabel('RMSE')
+  plt.legend()
+  plt.show()
+  plt.savefig('loss_plots/GAIN_rmse_'+ str(time_stamp) + '_' + str(missing_rate) + '_'  + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+
+
   ## Return imputed data      
   Z_mb = uniform_sampler(0, 0.01, no, dim) 
   M_mb = data_m

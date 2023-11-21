@@ -23,10 +23,11 @@ from __future__ import print_function
 import argparse
 import numpy as np
 import pandas as pd 
+import datetime
 
 from data_loader import data_loader
 from gain import gain
-from utils import rmse_loss
+from utils import rmse_loss, get_hour_day
 
 
 def main (args):
@@ -54,14 +55,19 @@ def main (args):
                      'iterations': args.iterations}
   
   # Load data and introduce missingness
-  ori_data_x, miss_data_x, data_m = data_loader(data_name, miss_rate)
+  ori_data_x, miss_data_x, data_m = data_loader(data_name, miss_rate, True)
+
+  #save data_m as a csv file with the time stamp
+  time_stamp=get_hour_day( datetime.datetime.now())
+  np.savetxt("results/data_m_" +str(time_stamp)+ '_' +args.data_name+"_missrate_"+str(args.miss_rate)+".csv", data_m, delimiter=",")
 
 
   # Impute missing data
-  imputed_data_x = gain(miss_data_x, gain_parameters)
+  imputed_data_x = gain(miss_data_x, gain_parameters, ori_data_x.values)
   
   # Report the RMSE performance
-  rmse = rmse_loss (ori_data_x.values, imputed_data_x, data_m)
+  rmse, rmse_training = rmse_loss (ori_data_x.values, imputed_data_x, data_m)
+
   
   #obtain a pandas dataframe from the imputed data np array
   imputed_data_df = pd.DataFrame(imputed_data_x)
@@ -81,7 +87,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument(
       '--data_name',
-      choices=['letter','spam', 'proteomics'],
+      choices=['letter','spam', 'proteomics', 'proteomics_set_seed'],
       default='spam',
       type=str)
   parser.add_argument(
@@ -114,9 +120,11 @@ if __name__ == '__main__':
   
   # Calls main function  
   imputed_data, rmse = main(args)
-
+  rmse=np.round(rmse, 4)
+  #get time stamp
+  time_stamp=get_hour_day( datetime.datetime.now())
 
   #save the imputed data as a csv file
-  imputed_data.to_csv("results/imputed_data_"+args.data_name+"_missrate_"+str(args.miss_rate)+"_batchsize_"+str(args.batch_size)+"_hintrate_"+str(args.hint_rate)+"_alpha_"+str(args.alpha)+"_iterations_"+str(args.iterations)+".csv")
+  imputed_data.to_csv("results/imputed_" +str(time_stamp)+ '_' +args.data_name+"_rmse_"+str(rmse)+"_missrate_"+str(args.miss_rate)+"_batchsize_"+str(args.batch_size)+"_hintrate_"+str(args.hint_rate)+"_alpha_"+str(args.alpha)+"_iterations_"+str(args.iterations)+".csv")
 
   

@@ -163,8 +163,11 @@ cython_debug/
 .idea/*
 .vscode/*
 results/*
+*.png
 *.csv.gz
 *.csv
 Proteomics/*
 GAIN_prots/data/*
 GAIN_prots/results/*
+GAIN_prots/loss_plots/*
+GAIN_prots/optuna_results/*
