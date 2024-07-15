@@ -168,7 +168,7 @@ def rmse_loss (ori_data, imputed_data, data_m, print_option=True):
   
 
   
-  # Obtain a matrix that is 1 where data_missing_initial is 0 and data_m is 0 (i.e. where there is no missing data in the original data and but there is in the extended missing data)
+  # Obtain a matrix that is 1 where data_missing_initial is 0 and data_m is 0 (i.e. where there is no missing data in the original data and but there is in the extended missing data) (the notation is changed for data_m[MVS=0] and data_missing_initial[MVS=1])
   data_missing_shared = (data_missing_initial) * (1-data_m)
   data_missing_added = (1-data_missing_initial) * (1-data_m)
   data_training = (1-data_missing_initial) * (data_m)

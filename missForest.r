@@ -12,7 +12,7 @@ library(reticulate)
 print("Packages loaded")
 
 # set directory name
-directory_name <- "set_seed_20_ntree_100"
+directory_name <- "set_seed_22_ntree_1"
 
 # Set the number of cores to use
 cores <- 24
@@ -75,7 +75,7 @@ dataset <- as.data.frame(dataset)
 # Perform the imputation using missForest while saving output in a file
 sink(paste("results/",directory_name,"/MF_imputation_",directory_name ,".txt",sep=""), append=FALSE)
 print("Imputation started")
-imputed_dataset <- missForest(dataset, maxiter = 30, ntree = 100, replace = TRUE, decreasing = TRUE, parallelize = "variables", verbose = TRUE,variablewise = TRUE)
+imputed_dataset <- missForest(dataset, maxiter = 30, ntree = 1, replace = TRUE, decreasing = TRUE, parallelize = "variables", verbose = TRUE,variablewise = TRUE)
 print("Imputation done")
 
 

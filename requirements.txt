@@ -9,3 +9,4 @@ tqdm
 optuna
 plotly
 kaleido
+upsetplot

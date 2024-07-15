@@ -72,7 +72,12 @@ class ImputationEvaluation:
         print(correlation_array)
         #sort the 
         #get the cluster map of the correlation matrix with legend from dataframe correlation_array
-        cluster_map = sns.clustermap(correlation_array, cmap="coolwarm", vmin=-1, vmax=1, center=0, annot=True, fmt=".2f", linewidths=.75)
+        cluster_map = sns.clustermap(correlation_array, cmap="coolwarm", vmin=-1, vmax=1, center=0, annot=True, fmt=".2f", linewidths=.75, row_cluster=False, col_cluster=True)
+
+        #get the cluster map of the correlation matrix with legend from the correlation_array with the same order in the columns as the rows
+        #cluster_map = sns.clustermap(correlation_array, cmap='coolwarm', vmin=-1, vmax=1, center=0, annot=True, fmt='.2f', xticklabels=[IV.name for IV in df_compare_array], yticklabels=[IV.name for IV in df_compare_array])
+
+
         #cluster_map = sns.clustermap(correlation_array, cmap='mako', vmin=-1, vmax=1, center=0, annot=True, fmt='.2f')
         return cluster_map
     
@@ -259,8 +264,6 @@ class ImputationEvaluation:
 
 
 
-
-
         #plot the mean transcriptomics values with the mean proteomics values pre and post imputation
 
 
@@ -275,27 +278,27 @@ class ImputationEvaluation:
 df = pd.read_csv('/data/benchmarks/clines/proteomics.csv', index_col=0)
 
 #Importing data for ImputationEvaluation class and make an array of that class
-df_MF_10_1000 = ImputationEvaluation('df_MF_10_1000', '/home/jorgeribeiro/JorgeRibeiroThesis/results/missForest_10_1000/proteomics_imputed_maxitter10_ntree1000_replaceT_decreasingT.csv', df)
-df_MF_20_2000 = ImputationEvaluation('df_MF_20_2000', '/home/jorgeribeiro/JorgeRibeiroThesis/results/missForest_20_2000/proteomics_imputed_maxitter20_ntree2000_replaceT_decreasingT.csv', df)
-df_MF_30_1000 = ImputationEvaluation('df_MF_30_1000', '/home/jorgeribeiro/JorgeRibeiroThesis/results/missForest_30_1000_nogenesymbol/proteomics_imputed_maxitter30_ntree1000_replaceT_decreasingT.csv', df)
-df_gain= ImputationEvaluation('df_gain', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.0_batchsize_128_hintrate_0.9_alpha_100.0_iterations_10000.csv', df)
-df_gain_alpha_10= ImputationEvaluation('df_gain_alpha_10', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.0_batchsize_128_hintrate_0.9_alpha_10.0_iterations_10000.csv', df)
-df_gain_alpha_0_1= ImputationEvaluation('df_gain_alpha_0_1', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.0_batchsize_128_hintrate_0.9_alpha_0.1_iterations_10000.csv', df)
-df_gain_alpha_1000= ImputationEvaluation('df_gain_alpha_1000', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.0_batchsize_128_hintrate_0.9_alpha_1000.0_iterations_10000.csv', df)
-df_compare = ImputationEvaluation('df_compare', '/data/benchmarks/clines/proteomics_ccle.csv', df)
-df_original = ImputationEvaluation('df_original', '/data/benchmarks/clines/proteomics.csv', df)
-df_gain_hr_0_6_mr_0_1= ImputationEvaluation('df_gain_hr_0_6_mr_0_1','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.1_batchsize_128_hintrate_0.6_alpha_100.0_iterations_10000.csv', df)
-df_gain_hr_0_6= ImputationEvaluation('df_gain_hr_0_6','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_16h_14Sep_proteomics_rmse_nan_missrate_0.0_batchsize_128_hintrate_0.6_alpha_100.0_iterations_10000.csv', df)
-df_gain_hr_0_6_mr_0_01= ImputationEvaluation('df_gain_hr_0_6_mr_0_01','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_22h_14Sep_proteomics_rmse_0.0627_missrate_0.01_batchsize_128_hintrate_0.6_alpha_100.0_iterations_10000.csv', df)
-df_gain_mr_0_1= ImputationEvaluation('df_gain_mr_0_1','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.1_batchsize_128_hintrate_0.9_alpha_100.0_iterations_10000.csv', df)
-df_gain_hr_0_0_mr0_01= ImputationEvaluation('df_gain_hr_0_0_mr0_01','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_0h_18Sep_proteomics_rmse_0.058_missrate_0.01_batchsize_128_hintrate_0.0_alpha_100.0_iterations_10000.csv', df)
-df_replace_compare = ImputationEvaluation('df_replace_compare', '/home/jorgeribeiro/JorgeRibeiroThesis/results/MVs_replace_df_compare.csv', df)
-df_mean_rows = ImputationEvaluation('df_mean_rows', '/home/jorgeribeiro/JorgeRibeiroThesis/results/mean_rows.csv', df)
-df_mean_columns = ImputationEvaluation('df_mean_columns', '/home/jorgeribeiro/JorgeRibeiroThesis/results/mean_column.csv', df)
-df_VAE = ImputationEvaluation('df_VAE', '/home/jorgeribeiro/JorgeRibeiroThesis/Proteomics/proteomicsVAE.csv', df)
-df_optuna_mr0_1= ImputationEvaluation('df_optuna_mr0_1', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_18h_27Sep_proteomics_rmse_0.0461_missrate_0.1_batchsize_512_hintrate_0.2_alpha_1000.0_iterations_1000.csv', df)
+df_MF_10_1000 = ImputationEvaluation('MF I10 T1000', '/home/jorgeribeiro/JorgeRibeiroThesis/results/missForest_10_1000/proteomics_imputed_maxitter10_ntree1000_replaceT_decreasingT.csv', df)
+df_MF_20_2000 = ImputationEvaluation('MF I20 T2000', '/home/jorgeribeiro/JorgeRibeiroThesis/results/missForest_20_2000/proteomics_imputed_maxitter20_ntree2000_replaceT_decreasingT.csv', df)
+df_MF_30_1000 = ImputationEvaluation('MF I30 T1000', '/home/jorgeribeiro/JorgeRibeiroThesis/results/missForest_30_1000_nogenesymbol/proteomics_imputed_maxitter30_ntree1000_replaceT_decreasingT.csv', df)
+df_gain= ImputationEvaluation('GAIN', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.0_batchsize_128_hintrate_0.9_alpha_100.0_iterations_10000.csv', df)
+df_gain_alpha_10= ImputationEvaluation('GAIN alpha10', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.0_batchsize_128_hintrate_0.9_alpha_10.0_iterations_10000.csv', df)
+df_gain_alpha_0_1= ImputationEvaluation('GAIN alpha0.1', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.0_batchsize_128_hintrate_0.9_alpha_0.1_iterations_10000.csv', df)
+df_gain_alpha_1000= ImputationEvaluation('GAIN alpha1000', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.0_batchsize_128_hintrate_0.9_alpha_1000.0_iterations_10000.csv', df)
+df_compare = ImputationEvaluation('Independent', '/data/benchmarks/clines/proteomics_ccle.csv', df)
+df_original = ImputationEvaluation('Original', '/data/benchmarks/clines/proteomics.csv', df)
+df_gain_hr_0_6_mr_0_1= ImputationEvaluation('GAIN h0.6 MR0.1','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.1_batchsize_128_hintrate_0.6_alpha_100.0_iterations_10000.csv', df)
+df_gain_hr_0_6= ImputationEvaluation('GAIN h0.6 alpha100','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_16h_14Sep_proteomics_rmse_nan_missrate_0.0_batchsize_128_hintrate_0.6_alpha_100.0_iterations_10000.csv', df)
+df_gain_hr_0_6_mr_0_01= ImputationEvaluation('GAIN h0.6 MR0.01','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_22h_14Sep_proteomics_rmse_0.0627_missrate_0.01_batchsize_128_hintrate_0.6_alpha_100.0_iterations_10000.csv', df)
+df_gain_mr_0_1= ImputationEvaluation('GAIN MR0.1','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_data_proteomics_missrate_0.1_batchsize_128_hintrate_0.9_alpha_100.0_iterations_10000.csv', df)
+df_gain_hr_0_0_mr0_01= ImputationEvaluation('GAIN h0 MR0.01','/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_0h_18Sep_proteomics_rmse_0.058_missrate_0.01_batchsize_128_hintrate_0.0_alpha_100.0_iterations_10000.csv', df)
+df_replace_compare = ImputationEvaluation('Independent Replaced', '/home/jorgeribeiro/JorgeRibeiroThesis/results/MVs_replace_df_compare.csv', df)
+df_mean_rows = ImputationEvaluation('Mean by rows', '/home/jorgeribeiro/JorgeRibeiroThesis/results/mean_rows.csv', df)
+df_mean_columns = ImputationEvaluation('Mean by columns', '/home/jorgeribeiro/JorgeRibeiroThesis/results/mean_column.csv', df)
+df_VAE = ImputationEvaluation('VAE', '/home/jorgeribeiro/JorgeRibeiroThesis/Proteomics/proteomicsVAE.csv', df)
+df_optuna_mr0_1= ImputationEvaluation('Optuna MR0.1', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_18h_27Sep_proteomics_rmse_0.0461_missrate_0.1_batchsize_512_hintrate_0.2_alpha_1000.0_iterations_1000.csv', df)
 
-df_optuna_17_02= ImputationEvaluation('df_optuna_17_02', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_17h_2Oct_proteomics_rmse_nan_missrate_0.0_batchsize_128_hintrate_0.14_alpha_1000.0_iterations_1000.csv', df)
+df_optuna_17_02= ImputationEvaluation('Optuna GAIN', '/home/jorgeribeiro/JorgeRibeiroThesis/GAIN_prots/results/imputed_17h_2Oct_proteomics_rmse_nan_missrate_0.0_batchsize_128_hintrate_0.14_alpha_1000.0_iterations_1000.csv', df)
 
 #make an array of the dataframes to be compared
 df_compare_array = [df_original, df_gain, df_compare, df_MF_10_1000, df_MF_20_2000, df_MF_30_1000, df_gain_alpha_1000, df_gain_hr_0_6, df_replace_compare, df_mean_rows, df_VAE, df_optuna_17_02] 
@@ -311,8 +314,8 @@ df_compare_array = [df_original, df_gain, df_compare, df_MF_10_1000, df_MF_20_20
 transcript_file_path = '/data/benchmarks/clines/transcriptomics.csv'
 
 #obtain the plot of transcriptomics and proteomics values of missing and non missing values in the original dataset
-df_optuna_17_02.get_transcriptomics_plot(transcript_file_path, df)
-df_MF_30_1000.get_transcriptomics_plot(transcript_file_path, df)
+#df_optuna_17_02.get_transcriptomics_plot(transcript_file_path, df)
+#df_MF_30_1000.get_transcriptomics_plot(transcript_file_path, df)
 
 
 
@@ -320,8 +323,8 @@ df_MF_30_1000.get_transcriptomics_plot(transcript_file_path, df)
 # correlation_array = df_original.get_correlation_array(df_compare_array)
 
 # #obtain the cluster map of the correlation array
-# cluster_map = df_compare.get_cluster_map(df_compare_array)
-# cluster_map.savefig('/home/jorgeribeiro/JorgeRibeiroThesis/results/cluster_map'+ str(get_hour_day(datetime.datetime.now()))+'.png')
+cluster_map = df_compare.get_cluster_map(df_compare_array)
+cluster_map.savefig('/home/jorgeribeiro/JorgeRibeiroThesis/results/cluster_map'+ str(get_hour_day(datetime.datetime.now()))+'.png')
 
 
 
@@ -394,8 +397,6 @@ df_MF_30_1000.get_transcriptomics_plot(transcript_file_path, df)
 # print(df_correlation.mean())
 
 
-#sklearn.metrics.mean_squared_error search this too
-#calcular mse
 
 
 

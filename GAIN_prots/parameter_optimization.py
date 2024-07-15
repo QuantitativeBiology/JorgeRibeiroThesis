@@ -331,7 +331,7 @@ def gain (data_x, gain_parameters, ori_data_x):
         Z_mb = uniform_sampler(0, 0.01, batch_size, dim)
         # Sample hint vectors
         H_mb_temp = binary_sampler(hint_rate, batch_size, dim)
-        H_mb = M_mb * H_mb_temp
+        H_mb = M_mb * H_mb_temp #+ 0.5 * (1 - H_mb_temp)
 
         # Combine random vectors with observed vectors
         X_mb = M_mb * X_mb + (1 - M_mb) * Z_mb
@@ -389,7 +389,7 @@ def objective(trial):
         #'batch_size': trial.suggest_categorical('batch_size', [128, 256, 512, 768, 1024]), 
         'batch_size': 128,
         'hint_rate': trial.suggest_float('hint_rate', 0, 0.9),
-        'alpha': trial.suggest_float('alpha', 10, 10000, step= 1),
+        'alpha': trial.suggest_float('alpha', 0.5, 1000, step= 0.5),
         'iterations': int(trial.suggest_float('iterations', 100, 10000, step=1)),
         #'discr_nr_layers': trial.suggest_categorical('discr_nr_layers', [ 2, 3, 4, 5]),
         #'gen_nr_layers': trial.suggest_categorical('gen_nr_layers', [ 2, 3, 4, 5]),
@@ -405,7 +405,7 @@ if __name__ == '__main__':
     os.chdir('optuna_results')
 
     #set folder name
-    folder_name = '20_Oct_no_batch_trials_1000'
+    folder_name = 'Altered_H'
 
     # create folder for optuna results
     try:
@@ -417,7 +417,7 @@ if __name__ == '__main__':
 
     # Optuna study with database
     study = optuna.create_study(study_name='GAIN', storage='sqlite:///{}.db'.format(folder_name), load_if_exists=True, direction='minimize')
-    study.optimize(objective, n_trials=1000)
+    study.optimize(objective, n_trials=50)
     print('Number of finished trials:', len(study.trials))
     print('Best trial:', study.best_trial.params)
     print('Best value:', study.best_value)

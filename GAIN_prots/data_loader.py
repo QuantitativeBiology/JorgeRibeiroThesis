@@ -65,10 +65,6 @@ def data_loader (data_name, miss_rate, set_seed=False):
     no, dim = data_x.shape
     data_m= MVS_adder(data_x.values, miss_rate, set_seed=set_seed)
 
-    
-    #adaptar python3
-    # TODO: alterar para proteomics
-
 
   
   miss_data_x = data_x.values.copy()

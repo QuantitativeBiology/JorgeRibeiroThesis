@@ -30,10 +30,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 import datetime
+import os
 
 from utils import normalization, renormalization, rounding, rmse_loss
 from utils import xavier_init, get_hour_day
 from utils import binary_sampler, uniform_sampler, sample_batch_index
+
+from sklearn.metrics import roc_curve, roc_auc_score
 
 
 def gain (data_x, gain_parameters, ori_data_x):
@@ -156,6 +159,12 @@ def gain (data_x, gain_parameters, ori_data_x):
   rmse_loss_list = []
   G_total_loss_list = []
   rmse_training_data_list = []
+  Accuracy_list = []
+  Precision_list = []
+  Recall_list = []
+  Perc_mvs_list = []
+  AUC_list = []
+
   
   ## GAIN solver
   D_solver = tf.train.AdamOptimizer().minimize(D_loss, var_list=theta_D)
@@ -181,11 +190,34 @@ def gain (data_x, gain_parameters, ori_data_x):
     # Combine random vectors with observed vectors
     X_mb = M_mb * X_mb + (1-M_mb) * Z_mb 
       
-    _, D_loss_curr = sess.run([D_solver, D_loss_temp], 
+    _, D_prob_curr, D_loss_curr = sess.run([D_solver, D_prob ,D_loss_temp], 
                               feed_dict = {M: M_mb, X: X_mb, H: H_mb})
     _, G_loss_curr, MSE_loss_curr = \
     sess.run([G_solver, G_loss_temp, MSE_loss],
              feed_dict = {X: X_mb, M: M_mb, H: H_mb})
+
+    #transform D_prob to a numpy array
+    D_prob_curr = np.array(D_prob_curr)
+
+    #calculate accuracy, precision and recall of discriminator
+    D_prob_curr = D_prob_curr.flatten()
+    D_prob_curr = np.round(D_prob_curr)
+    D_prob_curr = D_prob_curr.astype(int)
+    M_np = M_mb.flatten()
+    M_np = M_np.astype(int)
+    accuracy = np.mean(D_prob_curr == M_np)
+    precision = np.sum(D_prob_curr * M_np) / np.sum(D_prob_curr)
+    recall = np.sum(D_prob_curr * M_np) / np.sum(M_np)
+
+    #calculate percentage of MVs predicted
+    perc_mvs = np.sum(1-M_np) / len(M_np)
+
+    #calculate AUC
+    auc = roc_auc_score(M_np, D_prob_curr)
+
+    #percentage of true positives and true negatives
+    #tn, fp, fn, tp = confusion_matrix(M_np, D_prob_curr).ravel()
+
     
     #save loss across iterations for plotting
     D_loss_list.append(D_loss_curr)
@@ -193,6 +225,11 @@ def gain (data_x, gain_parameters, ori_data_x):
     MSE_loss_list.append(MSE_loss_curr)
     MSE_loss_alpha_list.append(alpha * MSE_loss_curr)
     G_total_loss_list.append(G_loss_curr + alpha * MSE_loss_curr)
+    Accuracy_list.append(accuracy)
+    Precision_list.append(precision)
+    Recall_list.append(recall)
+    Perc_mvs_list.append(perc_mvs)
+    AUC_list.append(auc)
 
     #get imputed data from this iteration
     Z_mb = uniform_sampler(0, 0.01, no, dim) 
@@ -208,7 +245,16 @@ def gain (data_x, gain_parameters, ori_data_x):
     rmse_loss_current, rmse_training_data_loss_current= rmse_loss(ori_data_x, imputed_data, data_m, False)
     rmse_loss_list.append(rmse_loss_current)
     rmse_training_data_list.append(rmse_training_data_loss_current)
-            
+
+
+  #get hour and day in the same string for saving the plot
+  time_stamp=get_hour_day( datetime.datetime.now())
+
+  #change directory to save plots to a new folder if it does not exist yet results/time_stamp with f string
+  if not os.path.exists(f'loss_plots/{time_stamp}'):
+    os.makedirs(f'loss_plots/{time_stamp}')
+
+
   #plot loss across iterations
   plt.plot(D_loss_list, label='D_loss')
   plt.plot(G_loss_list, label='G_loss')
@@ -221,15 +267,46 @@ def gain (data_x, gain_parameters, ori_data_x):
   plt.legend()
   plt.show()
 
-  #get hour and day in the same string for saving the plot
-  time_stamp=get_hour_day( datetime.datetime.now())
-  
-
 
   #save the plot with the hyperparameters in the name
-  plt.savefig('loss_plots/GAIN_loss_'+ str(time_stamp)+ '_' + str(missing_rate) + '_' + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+  plt.savefig('loss_plots/'+time_stamp+'/GAIN_loss_'+ str(time_stamp)+ '_' + str(missing_rate) + '_' + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+  plt.clf()
 
-  #clear the plot
+  #plot the losses saved in 4 subplots on top of each other and start them all at 0
+  fig, axs = plt.subplots(4, figsize=(14, 10))
+  axs[0].set_ylim(0, max(D_loss_list))
+  axs[0].plot(D_loss_list, label='D_loss')
+  axs[0].set_title('D_loss')
+  axs[1].set_ylim(0, max(G_loss_list))
+  axs[1].plot(G_loss_list, label='G_loss')
+  axs[1].set_title('G_loss')
+  axs[2].set_ylim(0, max(MSE_loss_list))
+  axs[2].plot(MSE_loss_list, label='MSE_loss')
+  axs[2].set_title('MSE_loss')
+  axs[3].set_ylim(0, max(rmse_loss_list))
+  axs[3].plot(rmse_loss_list, label='RMSE')
+  axs[3].set_title('RMSE')
+  plt.show()
+  plt.savefig('loss_plots/'+time_stamp+'/GAIN_loss_subplots_'+ str(time_stamp) + '_' + str(missing_rate) + '_' + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+  plt.clf()
+
+  #plot accuracy, precision, recall, perc_mvs and AUC across iterations in subplots, precision and recall together
+  fig, axs = plt.subplots(4, figsize=(14, 10))
+  axs[0].set_ylim(0, 1)
+  axs[0].plot(Accuracy_list, label='Accuracy')
+  axs[0].set_title('Accuracy')
+  axs[1].set_ylim(0, 1)
+  axs[1].plot(Precision_list, label='Precision')
+  axs[1].plot(Recall_list, label='Recall')
+  axs[1].set_title('Precision and Recall')
+  axs[1].legend()
+  axs[2].set_ylim(0, 1)
+  axs[2].plot(AUC_list, label='AUC')
+  axs[2].set_title('AUC')
+  axs[3].set_ylim(0, 1)
+  axs[3].plot(Perc_mvs_list, label='Percentage of MVs')
+  axs[3].set_title('Percentage of MVs')
+  plt.savefig('loss_plots/'+time_stamp+'/GAIN_accuracy_precision_recall_perc_mvs_'+ str(time_stamp) + '_' + str(missing_rate) + '_' + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
   plt.clf()
 
   #plot rmse across iterations and save it
@@ -240,18 +317,47 @@ def gain (data_x, gain_parameters, ori_data_x):
   plt.ylabel('RMSE')
   plt.legend()
   plt.show()
-  plt.savefig('loss_plots/GAIN_rmse_'+ str(time_stamp) + '_' + str(missing_rate) + '_'  + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+  plt.savefig('loss_plots/'+time_stamp+'/GAIN_rmse_'+ str(time_stamp) + '_' + str(missing_rate) + '_'  + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+  plt.clf()
 
 
   ## Return imputed data      
   Z_mb = uniform_sampler(0, 0.01, no, dim) 
   M_mb = data_m
   X_mb = norm_data_x          
-  X_mb = M_mb * X_mb + (1-M_mb) * Z_mb 
-      
+  X_mb = M_mb * X_mb + (1-M_mb) * Z_mb
+  H_mb = M_mb * binary_sampler(hint_rate, no, dim)
+
+
+  #obtain D_prob for the imputed data
+  D_prob_imputed = sess.run([D_prob], feed_dict = {X: X_mb, M: M_mb, H: M_mb})[0]
+
+  #transform D_prob to a numpy array 1D without flattening
+  D_prob_imputed = np.array(D_prob_imputed)
+  #D_prob_imputed = D_prob_imputed.flatten()
+  D_prob_imputed = np.reshape(D_prob_imputed, (D_prob_imputed.shape[0]* D_prob_imputed.shape[1],1))
+
+  
+  #get a plot of D_prob distribution for the imputed data
+  plt.hist(D_prob_imputed, bins=20)
+  plt.xlabel('D Probability for Final Data')
+  plt.ylabel('Frequency')
+  plt.savefig('loss_plots/'+time_stamp+'/D_prob_curr_distribution_'+ str(time_stamp) + '_' + str(missing_rate) + '_'  + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+  plt.clf()
+
+  #get a ROC curve for the imputed data with the diagonal line
+  fpr, tpr, thresholds = roc_curve(data_m.flatten(), D_prob_imputed.flatten())
+  plt.plot([0, 1], [0, 1], linestyle='--')
+  plt.plot(fpr, tpr)
+  plt.xlabel('False Positive Rate')
+  plt.ylabel('True Positive Rate')
+  plt.savefig('loss_plots/'+time_stamp+'/ROC_curve_'+ str(time_stamp) + '_' + str(missing_rate) + '_'  + str(gain_parameters['batch_size']) + '_' + str(gain_parameters['hint_rate']) + '_' + str(gain_parameters['alpha']) + '_' + str(gain_parameters['iterations']) + '.png')
+  plt.clf()
+
   imputed_data = sess.run([G_sample], feed_dict = {X: X_mb, M: M_mb})[0]
   
-  imputed_data = data_m * norm_data_x + (1-data_m) * imputed_data
+  imputed_data = data_m * norm_data_x + (1-data_m) * imputed_data 
+
   
   # Renormalization
   imputed_data = renormalization(imputed_data, norm_parameters)  
@@ -260,3 +366,8 @@ def gain (data_x, gain_parameters, ori_data_x):
   imputed_data = rounding(imputed_data, data_x)  
           
   return imputed_data
+
+
+
+
+

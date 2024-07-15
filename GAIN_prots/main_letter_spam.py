@@ -59,7 +59,7 @@ def main (args):
 
   #save data_m as a csv file with the time stamp
   time_stamp=get_hour_day( datetime.datetime.now())
-  np.savetxt("results/data_m_" +str(time_stamp)+ '_' +args.data_name+"_missrate_"+str(args.miss_rate)+".csv", data_m, delimiter=",")
+  np.savetxt("results/late_tests_results/data_m_20" +str(time_stamp)+ '_' +args.data_name+"_missrate_"+str(args.miss_rate)+".csv", data_m, delimiter=",")
 
 
   # Impute missing data
@@ -125,6 +125,6 @@ if __name__ == '__main__':
   time_stamp=get_hour_day( datetime.datetime.now())
 
   #save the imputed data as a csv file
-  imputed_data.to_csv("results/imputed_" +str(time_stamp)+ '_' +args.data_name+"_rmse_"+str(rmse)+"_missrate_"+str(args.miss_rate)+"_batchsize_"+str(args.batch_size)+"_hintrate_"+str(args.hint_rate)+"_alpha_"+str(args.alpha)+"_iterations_"+str(args.iterations)+".csv")
+  imputed_data.to_csv("results/late_tests_results/imputed_seed_20" +str(time_stamp)+ '_' +args.data_name+"_rmse_"+str(rmse)+"_missrate_"+str(args.miss_rate)+"_batchsize_"+str(args.batch_size)+"_hintrate_"+str(args.hint_rate)+"_alpha_"+str(args.alpha)+"_iterations_"+str(args.iterations)+".csv")
 
   
